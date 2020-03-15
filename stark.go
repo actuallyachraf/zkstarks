@@ -24,15 +24,15 @@ var PrimeFieldGen = PrimeField.NewFieldElementFromInt64(5)
 
 // DomainParameters represents the domain parameters of the proof generation
 type DomainParameters struct {
-	Trace                 []ff.FieldElement
-	GeneratorG            ff.FieldElement
-	SubgroupG             []ff.FieldElement
-	GeneratorH            ff.FieldElement
-	SubgroupH             []ff.FieldElement
-	EvaluationDomain      []ff.FieldElement
-	Polynomial            poly.Polynomial
-	PolynomialEvaluations []*big.Int
-	EvaluationRoot        []byte
+	Trace                 []ff.FieldElement `json:"computation_trace"`
+	GeneratorG            ff.FieldElement   `json:"G_generator"`
+	SubgroupG             []ff.FieldElement `json:"G_subgroup"`
+	GeneratorH            ff.FieldElement   `json:"H_generator"`
+	SubgroupH             []ff.FieldElement `json:"H_subgroup"`
+	EvaluationDomain      []ff.FieldElement `json:"evaluation_domain"`
+	Polynomial            poly.Polynomial   `json:"interpoland_polynomial"`
+	PolynomialEvaluations []*big.Int        `json:"polynomial_evaluations"`
+	EvaluationRoot        []byte            `json:"evaluation_commitment"`
 }
 
 // GenSeq computes the actual sequence
