@@ -5,6 +5,13 @@ Status : **WIP**
 This is a literate implementation of zkSTARKs based on the recent tutorials
 by [StarkWare](https://github.com/starkware-industries/stark101).
 
+The package implements both the primitives necessary for proof generation
+and an example program that generates a proof of the following statement :
+
+```sh
+I know a field element *X* such that the 1023rd element of the FibonacciSq sequence starting with 1, *X* is 2338775057.
+```
+
 ## Usage
 
 The program will take some time to run polynomial interpolation and evaluation

@@ -13,6 +13,11 @@ import (
 // On each call to send the channel state is update by transcript hash
 // and the proof contains the transcript operations.
 
+// Pragmatically this implementation simulates merlin transcripts where
+// each "computation" adds some randomness to the state's hash which we
+// use to simulate randomness when emulating prover-verifier interaction.
+// More : https://merlin.cool/
+
 var (
 	sendOperator   = "send:"
 	receiveRandInt = "receiveRandInt:"
