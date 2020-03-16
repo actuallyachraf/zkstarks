@@ -2,6 +2,7 @@ package zkstarks
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -33,6 +34,76 @@ type DomainParameters struct {
 	Polynomial            poly.Polynomial   `json:"interpoland_polynomial"`
 	PolynomialEvaluations []*big.Int        `json:"polynomial_evaluations"`
 	EvaluationRoot        []byte            `json:"evaluation_commitment"`
+}
+
+// MarshalJSON populates the JSON properly for unexported fields
+func (params *DomainParameters) MarshalJSON() ([]byte, error) {
+
+	field := params.Trace[0].Field().Modulus().String()
+	trace := make([]string, 0, len(params.Trace))
+
+	for _, e := range params.Trace {
+		trace = append(trace, e.Big().String())
+	}
+	g := params.GeneratorG.Big().String()
+	h := params.GeneratorH.Big().String()
+
+	Gsubgroup := make([]string, 0, len(params.SubgroupG))
+	Hsubgroup := make([]string, 0, len(params.SubgroupH))
+
+	for _, e := range params.SubgroupG {
+		Gsubgroup = append(Gsubgroup, e.Big().String())
+	}
+
+	for _, e := range params.SubgroupH {
+		Hsubgroup = append(Hsubgroup, e.Big().String())
+	}
+	evaldomain := make([]string, 0, len(params.EvaluationDomain))
+
+	for _, e := range params.EvaluationDomain {
+		evaldomain = append(evaldomain, e.Big().String())
+	}
+
+	coeffs := make([]string, 0, len(params.Polynomial))
+
+	for _, e := range params.Polynomial {
+		coeffs = append(coeffs, e.String())
+	}
+
+	polyEvals := make([]string, 0, len(params.PolynomialEvaluations))
+
+	for _, e := range params.PolynomialEvaluations {
+		polyEvals = append(polyEvals, e.String())
+	}
+
+	root := hex.EncodeToString(params.EvaluationRoot)
+
+	type JSONDomainParams struct {
+		Field                 string
+		Trace                 []string `json:"computation_trace"`
+		GeneratorG            string   `json:"G_generator"`
+		SubgroupG             []string `json:"G_subgroup"`
+		GeneratorH            string   `json:"H_generator"`
+		SubgroupH             []string `json:"H_subgroup"`
+		EvaluationDomain      []string `json:"evaluation_domain"`
+		Polynomial            []string `json:"interpoland_polynomial"`
+		PolynomialEvaluations []string `json:"polynomial_evaluations"`
+		EvaluationRoot        string   `json:"evaluation_commitment"`
+	}
+
+	jsonParams := &JSONDomainParams{
+		Field:                 field,
+		Trace:                 trace,
+		GeneratorG:            g,
+		SubgroupG:             Gsubgroup,
+		GeneratorH:            h,
+		SubgroupH:             Hsubgroup,
+		EvaluationDomain:      evaldomain,
+		Polynomial:            coeffs,
+		PolynomialEvaluations: polyEvals,
+		EvaluationRoot:        root,
+	}
+	return json.MarshalIndent(jsonParams, "", " ")
 }
 
 // GenSeq computes the actual sequence

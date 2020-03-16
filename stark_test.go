@@ -2,7 +2,6 @@ package zkstarks
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"io/ioutil"
 	"testing"
 
@@ -27,7 +26,7 @@ func TestZKGen(t *testing.T) {
 		fCommitment,
 	}
 
-	domainParamsJSON, err := json.MarshalIndent(domainParams, "", " ")
+	domainParamsJSON, err := domainParams.MarshalJSON()
 	if err != nil {
 		t.Fatal("failed to serialize domain params to JSON")
 	}
@@ -80,7 +79,7 @@ func TestZKGen(t *testing.T) {
 		// The third constraint requires polynomial composition
 		// f(g^2.x) - f(g.x^2) - f(x)^2 / (X - g^k)
 		fcompGSquared := f.Compose(poly.NewPolynomialBigInt(nt.FromInt64(0), g.Exp(nt.FromInt64(2)).Big()), PrimeField.Modulus())
-		fcompG := f.Compose(poly.NewPolynomialBigInt(nt.FromInt64(0), g.Big()).Pow(nt.FromInt64(2), PrimeField.Modulus()), PrimeField.Modulus())
+		fcompG := f.Compose(poly.NewPolynomialBigInt(nt.FromInt64(0), g.Big()), PrimeField.Modulus()).Pow(nt.FromInt64(2), PrimeField.Modulus())
 		fSquared := f.Pow(nt.FromInt64(2), PrimeField.Modulus())
 
 		num2 := fcompGSquared.Sub(fcompG, PrimeField.Modulus()).Sub(fSquared, PrimeField.Modulus())
