@@ -8,42 +8,43 @@ import (
 	"github.com/actuallyachraf/algebra/ff"
 	"github.com/actuallyachraf/algebra/nt"
 	"github.com/actuallyachraf/algebra/poly"
+	"github.com/actuallyachraf/go-merkle"
 )
 
 func TestZKGen(t *testing.T) {
 
 	/*
-	a, g, G, h, H, evalDomain, f, fEvals, fCommitment, fsChannel := GenerateDomainParameters()
+		a, g, G, h, H, evalDomain, f, fEvals, fCommitment, fsChannel := GenerateDomainParameters()
 
-	domainParams := &DomainParameters{
-		a,
-		g,
-		G,
-		h,
-		H,
-		evalDomain,
-		f,
-		fEvals,
-		fCommitment,
-	}
+		domainParams := &DomainParameters{
+			a,
+			g,
+			G,
+			h,
+			H,
+			evalDomain,
+			f,
+			fEvals,
+			fCommitment,
+		}
 
-	domainParamsJSON, err := domainparamsInstance.MarshalJSON()
-	if err != nil {
-		t.Fatal("failed to serialize domain params to JSON")
-	}
-	err = ioutil.WriteFile("./domainparamsInstance.json", domainParamsJSON, 0711)
-	if err != nil {
-		t.Fatal("failed to serialize domain params to JSON")
-	}
+		domainParamsJSON, err := domainparamsInstance.MarshalJSON()
+		if err != nil {
+			t.Fatal("failed to serialize domain params to JSON")
+		}
+		err = ioutil.WriteFile("./domainparamsInstance.json", domainParamsJSON, 0711)
+		if err != nil {
+			t.Fatal("failed to serialize domain params to JSON")
+		}
 	*/
-	paramBytes,err := ioutil.ReadFile("domainparams.json")
+	paramBytes, err := ioutil.ReadFile("domainparams.json")
 
 	paramsInstance := &DomainParameters{}
 	err = paramsInstance.UnmarshalJSON(paramBytes)
 	if err != nil {
-		t.Fatal("failed to unmarshal domain params with error :",err)
+		t.Fatal("failed to unmarshal domain params with error :", err)
 	}
-	_, g, _, _, _, _, f, _, _:= paramsInstance.Trace,paramsInstance.GeneratorG,paramsInstance.SubgroupG,paramsInstance.GeneratorH,paramsInstance.SubgroupH, paramsInstance.EvaluationDomain,paramsInstance.Polynomial,paramsInstance.PolynomialEvaluations,paramsInstance.EvaluationRoot
+	_, g, _, _, _, _, f, _, _ := paramsInstance.Trace, paramsInstance.GeneratorG, paramsInstance.SubgroupG, paramsInstance.GeneratorH, paramsInstance.SubgroupH, paramsInstance.EvaluationDomain, paramsInstance.Polynomial, paramsInstance.PolynomialEvaluations, paramsInstance.EvaluationRoot
 	fsChannel := NewChannel()
 	fsChannel.Send(paramsInstance.EvaluationRoot)
 	t.Run("TestParamGen", func(t *testing.T) {
@@ -138,6 +139,22 @@ func TestZKGen(t *testing.T) {
 			comb := constraints[i].Mul(poly.NewPolynomialBigInt(randomFE), PrimeField.Modulus())
 			compositionPoly = compositionPoly.Add(comb, PrimeField.Modulus())
 		}
+		t.Log("Composition Polynomial :", compositionPoly)
+
+		// Now we evaluate the composition polynomial on the evaluation domain
+		// and commit to the evaluation
+		compositionPolyEvals := make([]ff.FieldElement, len(paramsInstance.EvaluationDomain))
+		compositionPolyEvalsBytes := make([][]byte, len(paramsInstance.EvaluationDomain))
+		for idx, elem := range paramsInstance.EvaluationDomain {
+
+			eval := compositionPoly.Eval(elem.Big(), PrimeField.Modulus())
+			compositionPolyEvals[idx] = PrimeField.NewFieldElement(eval)
+			compositionPolyEvalsBytes[idx] = eval.Bytes()
+		}
+		compositionPolyEvalsRoot := merkle.Root(compositionPolyEvalsBytes)
+
+		t.Log("Composition Polynomial Evaluations Root :", hex.EncodeToString(compositionPolyEvalsRoot))
+		fsChannel.Send(compositionPolyEvalsRoot)
 
 	})
 }
