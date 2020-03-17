@@ -8,7 +8,7 @@ import (
 	"github.com/actuallyachraf/algebra/ff"
 	"github.com/actuallyachraf/algebra/nt"
 	"github.com/actuallyachraf/algebra/poly"
-	"github.com/actuallyachraf/go-merkle"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestZKGen(t *testing.T) {
@@ -144,17 +144,31 @@ func TestZKGen(t *testing.T) {
 		// Now we evaluate the composition polynomial on the evaluation domain
 		// and commit to the evaluation
 		compositionPolyEvals := make([]ff.FieldElement, len(paramsInstance.EvaluationDomain))
-		compositionPolyEvalsBytes := make([][]byte, len(paramsInstance.EvaluationDomain))
 		for idx, elem := range paramsInstance.EvaluationDomain {
 
 			eval := compositionPoly.Eval(elem.Big(), PrimeField.Modulus())
 			compositionPolyEvals[idx] = PrimeField.NewFieldElement(eval)
-			compositionPolyEvalsBytes[idx] = eval.Bytes()
 		}
-		compositionPolyEvalsRoot := merkle.Root(compositionPolyEvalsBytes)
+		compositionPolyEvalsRoot := DomainHash(compositionPolyEvals)
 
 		t.Log("Composition Polynomial Evaluations Root :", hex.EncodeToString(compositionPolyEvalsRoot))
 		fsChannel.Send(compositionPolyEvalsRoot)
+
+	})
+	t.Run("TestFRICommitment", func(t *testing.T) {
+		testPoly := poly.NewPolynomialInts(2, 3, 0, 1)
+		testDomain := []ff.FieldElement{PrimeField.NewFieldElementFromInt64(3), PrimeField.NewFieldElementFromInt64(5)}
+		testBeta := PrimeField.NewFieldElementFromInt64(7)
+
+		nextDomain, nextPoly, nextLayer := NextFRILayer(testDomain, testPoly, testBeta)
+
+		actualPoly := poly.NewPolynomialInts(23, 7)
+		actualDomain := []ff.FieldElement{PrimeField.NewFieldElementFromInt64(9)}
+		actualLayer := []ff.FieldElement{PrimeField.NewFieldElementFromInt64(86)}
+
+		assert.Equal(t, actualPoly, nextPoly)
+		assert.Equal(t, actualDomain, nextDomain)
+		assert.Equal(t, actualLayer, nextLayer)
 
 	})
 }
