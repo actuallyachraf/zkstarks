@@ -3,6 +3,7 @@ package zkstarks
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -34,6 +35,21 @@ type DomainParameters struct {
 	Polynomial            poly.Polynomial   `json:"interpoland_polynomial"`
 	PolynomialEvaluations []*big.Int        `json:"polynomial_evaluations"`
 	EvaluationRoot        []byte            `json:"evaluation_commitment"`
+}
+// Unpack returns the domain parameters as separate vars
+
+// JSONDomainParams encode values properly for safe serialization.
+type JSONDomainParams struct {
+	Field                 string
+	Trace                 []string `json:"computation_trace"`
+	GeneratorG            string   `json:"G_generator"`
+	SubgroupG             []string `json:"G_subgroup"`
+	GeneratorH            string   `json:"H_generator"`
+	SubgroupH             []string `json:"H_subgroup"`
+	EvaluationDomain      []string `json:"evaluation_domain"`
+	Polynomial            []string `json:"interpoland_polynomial"`
+	PolynomialEvaluations []string `json:"polynomial_evaluations"`
+	EvaluationRoot        string   `json:"evaluation_commitment"`
 }
 
 // MarshalJSON populates the JSON properly for unexported fields
@@ -78,19 +94,6 @@ func (params *DomainParameters) MarshalJSON() ([]byte, error) {
 
 	root := hex.EncodeToString(params.EvaluationRoot)
 
-	type JSONDomainParams struct {
-		Field                 string
-		Trace                 []string `json:"computation_trace"`
-		GeneratorG            string   `json:"G_generator"`
-		SubgroupG             []string `json:"G_subgroup"`
-		GeneratorH            string   `json:"H_generator"`
-		SubgroupH             []string `json:"H_subgroup"`
-		EvaluationDomain      []string `json:"evaluation_domain"`
-		Polynomial            []string `json:"interpoland_polynomial"`
-		PolynomialEvaluations []string `json:"polynomial_evaluations"`
-		EvaluationRoot        string   `json:"evaluation_commitment"`
-	}
-
 	jsonParams := &JSONDomainParams{
 		Field:                 field,
 		Trace:                 trace,
@@ -104,6 +107,88 @@ func (params *DomainParameters) MarshalJSON() ([]byte, error) {
 		EvaluationRoot:        root,
 	}
 	return json.MarshalIndent(jsonParams, "", " ")
+}
+
+// UnmarshalJSON parses a JSON serialized domain parameters instance.
+func (params *DomainParameters) UnmarshalJSON(b []byte) error {
+
+	var jsonDomParams JSONDomainParams
+	err := json.Unmarshal(b, &jsonDomParams)
+
+	if err != nil {
+		return err
+	}
+
+	filedOrder, ok := new(big.Int).SetString(jsonDomParams.Field, 10)
+	field, _ := ff.NewFiniteField(filedOrder)
+	if !ok {
+		return errors.New("bad number encoding")
+	}
+	params.Trace = make([]ff.FieldElement, len(jsonDomParams.Trace))
+
+	for i, e := range jsonDomParams.Trace {
+
+		elem, ok := new(big.Int).SetString(e, 10)
+		if !ok {
+			return errors.New("bad number encoding")
+		}
+		params.Trace[i] = field.NewFieldElement(elem)
+	}
+	params.SubgroupG = make([]ff.FieldElement, len(jsonDomParams.SubgroupG))
+	params.SubgroupH = make([]ff.FieldElement, len(jsonDomParams.SubgroupH))
+
+	for i, e := range jsonDomParams.SubgroupG {
+		elem, ok := new(big.Int).SetString(e, 10)
+		if !ok {
+			return errors.New("bad number encoding")
+		}
+		params.SubgroupG[i] = field.NewFieldElement(elem)
+	}
+	for i, e := range jsonDomParams.SubgroupH {
+		elem, ok := new(big.Int).SetString(e, 10)
+		if !ok {
+			return errors.New("bad number encoding")
+		}
+		params.SubgroupH[i] = field.NewFieldElement(elem)
+	}
+
+	elemG, _ := new(big.Int).SetString(jsonDomParams.GeneratorG, 10)
+	elemH, _ := new(big.Int).SetString(jsonDomParams.GeneratorH, 10)
+
+	params.GeneratorG = field.NewFieldElement(elemG)
+	params.GeneratorH = field.NewFieldElement(elemH)
+
+	params.EvaluationDomain = make([]ff.FieldElement, len(jsonDomParams.EvaluationDomain))
+	for i, e := range jsonDomParams.EvaluationDomain {
+		elem, ok := new(big.Int).SetString(e, 10)
+		if !ok {
+			return errors.New("bad number encoding")
+		}
+		params.EvaluationDomain[i] = field.NewFieldElement(elem)
+	}
+
+	coeffs := make([]ff.FieldElement, len(jsonDomParams.Polynomial))
+	for i, e := range jsonDomParams.Polynomial {
+		elem, ok := new(big.Int).SetString(e, 10)
+		if !ok {
+			return errors.New("bad number encoding")
+		}
+		coeffs[i] = field.NewFieldElement(elem)
+	}
+
+	params.Polynomial = poly.NewPolynomial(coeffs)
+	params.PolynomialEvaluations = make([]*big.Int, len(jsonDomParams.PolynomialEvaluations))
+	for i, e := range jsonDomParams.PolynomialEvaluations {
+		elem, ok := new(big.Int).SetString(e, 10)
+		if !ok {
+			return errors.New("bad number encoding")
+		}
+		params.PolynomialEvaluations[i] = elem
+	}
+
+	params.EvaluationRoot,_ = hex.DecodeString(jsonDomParams.EvaluationRoot)
+
+	return nil
 }
 
 // GenSeq computes the actual sequence

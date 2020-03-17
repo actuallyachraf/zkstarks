@@ -12,6 +12,7 @@ import (
 
 func TestZKGen(t *testing.T) {
 
+	/*
 	a, g, G, h, H, evalDomain, f, fEvals, fCommitment, fsChannel := GenerateDomainParameters()
 
 	domainParams := &DomainParameters{
@@ -26,26 +27,35 @@ func TestZKGen(t *testing.T) {
 		fCommitment,
 	}
 
-	domainParamsJSON, err := domainParams.MarshalJSON()
+	domainParamsJSON, err := domainparamsInstance.MarshalJSON()
 	if err != nil {
 		t.Fatal("failed to serialize domain params to JSON")
 	}
-	err = ioutil.WriteFile("./domainparams.json", domainParamsJSON, 0711)
+	err = ioutil.WriteFile("./domainparamsInstance.json", domainParamsJSON, 0711)
 	if err != nil {
 		t.Fatal("failed to serialize domain params to JSON")
 	}
+	*/
+	paramBytes,err := ioutil.ReadFile("domainparams.json")
 
+	paramsInstance := &DomainParameters{}
+	err = paramsInstance.UnmarshalJSON(paramBytes)
+	if err != nil {
+		t.Fatal("failed to unmarshal domain params with error :",err)
+	}
+	_, g, _, _, _, _, f, _, _:= paramsInstance.Trace,paramsInstance.GeneratorG,paramsInstance.SubgroupG,paramsInstance.GeneratorH,paramsInstance.SubgroupH, paramsInstance.EvaluationDomain,paramsInstance.Polynomial,paramsInstance.PolynomialEvaluations,paramsInstance.EvaluationRoot
+	fsChannel := NewChannel()
+	fsChannel.Send(paramsInstance.EvaluationRoot)
 	t.Run("TestParamGen", func(t *testing.T) {
-		t.Log("Trace length :", len(a))
-		t.Log("Subgroup G generator :", g)
-		t.Log("Subgroup order:", len(G))
-		t.Log("Subgroup H generator : ", h)
-		t.Log("Subgroup order :", len(H))
-		t.Log("Polynomial :", f.String())
-		t.Log("Eval domain order :", len(evalDomain))
-		t.Log("Merkle Commitment of evaluations :", hex.EncodeToString(fCommitment))
+		t.Log("Trace length :", len(paramsInstance.Trace))
+		t.Log("Subgroup G generator :", paramsInstance.GeneratorG)
+		t.Log("Subgroup order:", len(paramsInstance.SubgroupG))
+		t.Log("Subgroup H generator : ", paramsInstance.GeneratorH)
+		t.Log("Subgroup order :", len(paramsInstance.SubgroupH))
+		t.Log("Polynomial :", paramsInstance.Polynomial.String())
+		t.Log("Eval domain order :", len(paramsInstance.EvaluationDomain))
+		t.Log("Merkle Commitment of evaluations :", hex.EncodeToString(paramsInstance.EvaluationRoot))
 		t.Log("Chanel ", hex.EncodeToString(fsChannel.State))
-		t.Log("Polynomial evaluations :", fEvals[0])
 	})
 	t.Run("TestConstraintEncoding", func(t *testing.T) {
 		f := f.Clone(0)
