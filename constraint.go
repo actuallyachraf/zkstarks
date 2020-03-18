@@ -1,6 +1,8 @@
 package zkstarks
 
 import (
+	"github.com/actuallyachraf/algebra/ff"
+	"github.com/actuallyachraf/algebra/nt"
 	"github.com/actuallyachraf/algebra/poly"
 )
 
@@ -26,7 +28,7 @@ import (
 // FibSeq(i+2) = FibSeq(i+1)^2 + FibSeq(i)^2 => f(g(x)^2) - f(g(x))^2 - f(x)^2.
 
 // GenerateProgramConstraints generates the polynomial constraints for the proof.
-func GenerateProgramConstraints(f poly.Polynomial) {
+func GenerateProgramConstraints(f poly.Polynomial, g ff.FieldElement) (poly.Polynomial, poly.Polynomial, poly.Polynomial) {
 
 	// Each constraint (see /constraint.go) is represented by a polynomial u(x)
 	// that evaluates to 0 for a certain group element x in G
@@ -38,5 +40,47 @@ func GenerateProgramConstraints(f poly.Polynomial) {
 	// the quotient is itself a polynomial (quotient can be irreducible).
 	// A constraint is valid becomes simply a check that u(x)/r(x) is
 	// a polynomial.
+	num0 := f.Sub(poly.NewPolynomialInts(1), PrimeField.Modulus())
+	dem0 := poly.NewPolynomialInts(-1, 1)
+	quoPolyConstraint1, _ := num0.Div(dem0, PrimeField.Modulus())
+	// The second constraint
+	// f(x) - 2338775057 = 0 <=> f(x0) - 2338775057 / X - g^1022
+	num1 := f.Sub(poly.NewPolynomialInts(2338775057), PrimeField.Modulus())
+	dem1 := poly.NewPolynomialInts(0, 1).Sub(poly.NewPolynomial([]ff.FieldElement{g.Exp(nt.FromInt64(1022))}), PrimeField.Modulus())
+
+	quoPolyConstraint2, _ := num1.Div(dem1, PrimeField.Modulus())
+	// The third constraint requires polynomial composition
+	// f(g^2.x) - f(g.x^2) - f(x)^2 / (X - g^k)
+	fcompGSquared := f.Compose(poly.NewPolynomialBigInt(nt.FromInt64(0), g.Exp(nt.FromInt64(2)).Big()), PrimeField.Modulus())
+	fcompG := f.Compose(poly.NewPolynomialBigInt(nt.FromInt64(0), g.Big()), PrimeField.Modulus()).Pow(nt.FromInt64(2), PrimeField.Modulus())
+	fSquared := f.Pow(nt.FromInt64(2), PrimeField.Modulus())
+
+	num2 := fcompGSquared.Sub(fcompG, PrimeField.Modulus()).Sub(fSquared, PrimeField.Modulus())
+	dem2num := poly.NewPolynomialInts(0, 1).Clone(1023).Sub(poly.NewPolynomialInts(1), nil)
+
+	coeffs := []ff.FieldElement{
+		g.Exp(nt.FromInt64(1021)),
+		g.Exp(nt.FromInt64(1022)),
+		g.Exp(nt.FromInt64(1023)),
+	}
+
+	var terms []poly.Polynomial
+
+	for _, coeff := range coeffs {
+		monomial := poly.NewPolynomialInts(0, 1).Sub(poly.NewPolynomialBigInt(coeff.Big()), nil)
+		terms = append(terms, monomial)
+	}
+
+	dem2dem := poly.NewPolynomialInts(1)
+
+	for _, term := range terms {
+		dem2dem = dem2dem.Mul(term, PrimeField.Modulus())
+	}
+
+	dem2, _ := dem2num.Div(dem2dem, PrimeField.Modulus())
+
+	quoPolyConstraint3, _ := num2.Div(dem2, PrimeField.Modulus())
+
+	return quoPolyConstraint1, quoPolyConstraint2, quoPolyConstraint3
 
 }

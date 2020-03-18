@@ -123,3 +123,39 @@ func DomainHash(domain []ff.FieldElement) []byte {
 
 	return merkle.Root(domainBytes)
 }
+
+// GenerateFRICommitment given the composition polynomial
+// the evaluation domain, the evaluations on said domain and
+// the first commitment root.
+func GenerateFRICommitment(compositionPoly poly.Polynomial, domain []ff.FieldElement, compositionEvals []ff.FieldElement, compositionRoot []byte, fs Channel) ([][]ff.FieldElement, []poly.Polynomial, [][]ff.FieldElement, [][]byte) {
+
+	FRIPolynomials := []poly.Polynomial{compositionPoly}
+	FRIDomains := [][]ff.FieldElement{domain}
+	FRILayers := [][]ff.FieldElement{compositionEvals}
+	FRIMerkleRoots := [][]byte{compositionRoot}
+
+	iter := FRIPolynomials[len(FRIPolynomials)-1]
+	field := PrimeField
+
+	for iter.Degree() > 0 {
+
+		beta := field.NewFieldElement(fs.RandFE(PrimeField.Modulus()))
+
+		nextFRIDomain, nextFRIPoly, nextFRILayer := NextFRILayer(FRIDomains[len(FRIDomains)-1], FRIPolynomials[len(FRIPolynomials)-1], beta)
+
+		root := DomainHash(nextFRILayer)
+
+		FRIDomains = append(FRIDomains, nextFRIDomain)
+		FRIPolynomials = append(FRIPolynomials, nextFRIPoly)
+		FRILayers = append(FRILayers, nextFRILayer)
+		FRIMerkleRoots = append(FRIMerkleRoots, root)
+
+		fs.Send(FRIMerkleRoots[len(FRIMerkleRoots)-1])
+
+		iter = FRIPolynomials[len(FRIPolynomials)-1]
+
+	}
+	fs.Send(FRIPolynomials[len(FRIPolynomials)-1][0].Bytes())
+
+	return FRIDomains, FRIPolynomials, FRILayers, FRIMerkleRoots
+}
