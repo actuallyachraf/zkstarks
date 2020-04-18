@@ -110,27 +110,27 @@ func TestZKGen(t *testing.T) {
 
 		assert.Len(t, friLayers, 11)
 		assert.Len(t, friLayers[len(friLayers)-1], 8)
-		t.Log("FRI Domains Count :", len(friDomains))
-		t.Log("Last Layer :", friLayers[len(friLayers)-1])
+		expectedLastLayerConstant := PrimeField.NewFieldElementFromInt64(2550486681)
+		for _, x := range friLayers[len(friLayers)-1] {
+			assert.True(t, x.Equal(expectedLastLayerConstant))
+		}
+
 		assert.Equal(t, friPolys[len(friPolys)-1].Degree(), 0)
+
+		t.Log("FRI-Layer Count :", len(friLayers))
+		t.Log("FRI-Root Count", len(friRoots))
+		t.Log("FRI Domains Count :", len(friDomains))
 		t.Log("Last Layer Root :", hex.EncodeToString(friRoots[len(friRoots)-1]))
+		t.Log("Last Layer Terms")
+		for _, x := range friLayers[len(friLayers)-1] {
+			t.Log("x = ", x.String())
+		}
 		t.Log("Channel Proof", fsChannel.Proof)
 
+		cosetEvals := paramsInstance.PolynomialEvaluations
+		FRIDecommit(fsChannel, cosetEvals, friLayers)
+
+		t.Log("Final Proof Uncompressed", fsChannel.Proof)
 	})
-	t.Run("TestFRICommitment", func(t *testing.T) {
-		testPoly := poly.NewPolynomialInts(2, 3, 0, 1)
-		testDomain := []ff.FieldElement{PrimeField.NewFieldElementFromInt64(3), PrimeField.NewFieldElementFromInt64(5)}
-		testBeta := PrimeField.NewFieldElementFromInt64(7)
 
-		nextDomain, nextPoly, nextLayer := NextFRILayer(testDomain, testPoly, testBeta)
-
-		actualPoly := poly.NewPolynomialInts(23, 7)
-		actualDomain := []ff.FieldElement{PrimeField.NewFieldElementFromInt64(9)}
-		actualLayer := []ff.FieldElement{PrimeField.NewFieldElementFromInt64(86)}
-
-		assert.Equal(t, actualPoly, nextPoly)
-		assert.Equal(t, actualDomain, nextDomain)
-		assert.Equal(t, actualLayer, nextLayer)
-
-	})
 }

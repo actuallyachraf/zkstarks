@@ -1,6 +1,7 @@
 package zkstarks
 
 import (
+	"encoding/hex"
 	"math/big"
 	"strings"
 
@@ -42,7 +43,7 @@ func NewChannel() *Channel {
 func (ch *Channel) Send(s []byte) {
 	var builder strings.Builder
 	builder.WriteString(sendOperator)
-	builder.Write(s)
+	builder.WriteString(hex.EncodeToString(s))
 
 	ch.Proof = append(ch.Proof, builder.String())
 	ch.State = hash(concat(ch.State, s))
